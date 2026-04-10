@@ -111,7 +111,9 @@ print("Jaccard Matching Score:", score)
 
 ## Reproducing Experiments
 
+```
 python run_simulation.py
+```
 
 This script:
 
@@ -132,7 +134,9 @@ networkx
 
 Install via:
 
+```
 pip install -r requirements.txt
+```
 
 ---
 
