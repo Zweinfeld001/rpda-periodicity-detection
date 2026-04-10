@@ -43,9 +43,6 @@ gmpda_local.py     # GMPDA baseline comparison
 
 run_simulation.py  # Example experiment  
 
-notebooks/  
-    demo.ipynb     # Interactive demonstration  
-
 ---
 
 ## Installation
@@ -99,13 +96,6 @@ plot_rhythm_peak_sets(x, y, detected, run_length=T)
 
 ## Evaluation Metrics
 
-Utilities are provided for comparing detected rhythms against ground truth using:
-
-- Jaccard similarity
-- F1 score
-- Overlap coefficient
-- Hungarian matching for global assignment
-
 Example:
 
 ```python
@@ -125,7 +115,7 @@ python run_simulation.py
 
 This script:
 
-1. Generates synthetic rhythms
+1. Generates two synthetic rhythms
 2. Runs RPDA
 3. Computes evaluation metrics
 4. Produces diagnostic plots
