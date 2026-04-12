@@ -48,13 +48,15 @@ run_simulation.py  # Example experiment
 ## Installation
 
 Clone the repository:
-
+```
 git clone https://github.com/zacharyweinfeld/rpda-periodicity-detection.git  
 cd rpda-periodicity-detection
+```
 
 Install dependencies:
-
+```
 pip install -r requirements.txt
+```
 
 ---
 
