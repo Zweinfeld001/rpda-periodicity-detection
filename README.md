@@ -30,7 +30,7 @@ The algorithm outputs:
 ---
 
 ## Repository Structure
-
+```text
 rpda-periodicity-detection/
 
 README.md  
@@ -42,7 +42,7 @@ util.py            # Metrics, visualization, evaluation tools
 gmpda_local.py     # GMPDA baseline comparison  
 
 run_simulation.py  # Example experiment  
-
+```
 ---
 
 ## Installation
@@ -128,11 +128,13 @@ This script:
 
 ## Requirements
 
+```text
 numpy  
 scipy  
 pandas  
 matplotlib  
 networkx  
+```
 
 Install via:
 
