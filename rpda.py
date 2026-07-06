@@ -1,5 +1,5 @@
 import math
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 import networkx as nx
 from scipy.stats import norm, binom
@@ -13,25 +13,33 @@ def get_y_sd() -> float:
     return 0.1
 
 def calculate_x_margin(x_sd: float, confidence: float) -> float:
-    z = norm.ppf(confidence)  # one-sided
+    z = norm.ppf((1 + confidence) / 2)  # central two-sided interval
     return z * x_sd
 
 def calculate_y_margin(y_sd: float, confidence: float) -> float:
-    z = norm.ppf(confidence)  # one-sided
+    z = norm.ppf((1 + confidence) / 2)  # central two-sided interval
     return z * y_sd
 
 def calculate_p_null(x_margin: float, num_peaks: int, run_length: float) -> float:
-    window_fraction = (2 * x_margin) / run_length
-    p_null = 1 - (1 - window_fraction) ** num_peaks
+    """Timing-only occupancy probability for one evaluated forward prediction.
+
+    The two peaks used to construct a candidate are conditioning information, so
+    only the remaining N - 2 non-seed peaks contribute to the random-alignment
+    null.
+    """
+    window_fraction = min(max((2 * x_margin) / run_length, 0.0), 1.0)
+    non_seed_peaks = max(num_peaks - 2, 0)
+    p_null = 1 - (1 - window_fraction) ** non_seed_peaks
     # print("window_fraction: ", window_fraction, "p_null: ", p_null)
     return min(p_null, 1.0)
 
 
 class Candidate:
-    def __init__(self, id_: int, d: float, anchor: float):
+    def __init__(self, id_: int, d: float, anchor: float, seed_indices: tuple[int, int]):
         self.id = id_
         self.d = d
         self.anchor = anchor
+        self.seed_indices = seed_indices
         self.hit_indices: Optional[List[int]] = None
         self.hits: Optional[int] = None
         self.tries: Optional[int] = None
@@ -48,40 +56,34 @@ class Candidate:
     def count_hits(self, x: np.ndarray, y: np.ndarray, x_margin: float, y_margin: float) -> None:
         x = np.asarray(x); y = np.asarray(y)
 
-        # Anchor is a guaranteed hit (exact match assumed in your pipeline)
-        anchor_idx = int(np.where(x == self.anchor)[0][0])
-
-        hit_indices = [anchor_idx]
-        tries = 1
-        last_hit = self.anchor
+        # The two candidate-defining peaks are conditioning information.
+        hit_indices = [int(self.seed_indices[0]), int(self.seed_indices[1])]
+        tries = 2
+        k = 2
 
         while True:
-            t = last_hit + self.d
+            t = self.anchor + k * self.d
             if t > x[-1] + x_margin:
                 break
 
             x_mask = (x >= t - x_margin) & (x <= t + x_margin)
+            already_used = np.zeros(len(x), dtype=bool)
+            already_used[hit_indices] = True
+            x_mask &= ~already_used
             cand_idxs = np.where(x_mask)[0]
 
             if cand_idxs.size > 0:
-                # Keep candidates whose y are within margin of recent mean
-                recent_hits_y = y[hit_indices[-3:]]  # last up-to-3 hits
-                expected_y = float(np.mean(recent_hits_y))
+                expected_y = float(np.mean(y[hit_indices]))
                 valid = np.abs(y[cand_idxs] - expected_y) <= y_margin
                 valid_idxs = cand_idxs[valid]
 
                 if valid_idxs.size > 0:
-                    # choose closest in x
                     distances = np.abs(x[valid_idxs] - t)
                     hit_idx = int(valid_idxs[np.argmin(distances)])
                     hit_indices.append(hit_idx)
-                    last_hit = float(x[hit_idx])  # snap to actual
-                else:
-                    last_hit = float(t)
-            else:
-                last_hit = float(t)
 
             tries += 1
+            k += 1
 
         self.hit_indices = hit_indices
         self.hits = len(hit_indices)
@@ -92,8 +94,10 @@ class Candidate:
             raise RuntimeError("Must call count_hits() before binomial_test().")
         if self.hits < 3:
             return False
-        # skip first 2 guaranteed hits
-        p_value = 1 - binom.cdf(self.hits - 2, self.tries - 2, p_null)
+        # Skip the two candidate-defining peaks and test Pr[H >= h_obs].
+        h_obs = self.hits - 2
+        tries = self.tries - 2
+        p_value = binom.sf(h_obs - 1, tries, p_null)
         return p_value < alpha
 
 
@@ -184,10 +188,10 @@ class Candidates:
                 d = round(self.x[j] - self.x[i], 4)
                 if self.x[j] + self._get_min_hits() * d / 2 > self.run_length + self.x_margin:
                     break
-                if d < 2 * self.x_margin or self.y[i] - self.y[j] > 2 * self.y_margin:
+                if d < 2 * self.x_margin:
                     continue
                 anchor = float(self.x[i])
-                cand = Candidate(self.cur_id, d, anchor)
+                cand = Candidate(self.cur_id, d, anchor, seed_indices=(i, j))
                 self.candidate_lst.append(cand)
                 self.cur_id += 1
                 if self.verbose:

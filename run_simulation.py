@@ -33,7 +33,7 @@ plot_pulse_signal(
 )
 
 # --- Run RPDA ---
-detected = get_detected_rhythms(x, y, T)
+detected = get_detected_rhythms(x, y, T, verbose=True)
 
 print("\n--- Detected Rhythms ---")
 print("Number detected:", len(detected))

@@ -17,7 +17,7 @@ RPDA is a peak-based algorithm that detects rhythmic structure directly from eve
 
 1. Constructing candidate rhythms from inter-event spacings  
 2. Counting forward matches along predicted rhythm grids  
-3. Testing statistical significance using a binomial null model  
+3. Testing statistical significance using a binomial approximation to the target-coverage null model  
 4. Grouping overlapping candidates via the overlap coefficient  
 5. Returning rhythmic components with sufficient support  
 
